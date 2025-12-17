@@ -101,7 +101,9 @@ Exit codes:
 For local usage, Aathman Core and Aathman PaCM are expected to be checked out as sibling directories:
 
 parent-directory/
+
 ├── aathman-core/
+
 └── aathman-pacm/
 
 
