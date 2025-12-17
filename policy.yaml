@@ -1,0 +1,11 @@
+version: pacm-v1
+
+requirements:
+  signature_required: true
+
+allowed_signers:
+  - name: "aathman-root"
+    public_key: "427b26dcb87cdb882dc73f986ad1afcc77c034665fbee83472ef14c7080cf13d"
+
+constraints:
+  max_parameter_count: 5000000
