@@ -1,8 +1,8 @@
 """
 PaCM — Policy-as-Code for Models
 
-PaCM is a policy enforcement layer that consumes verified facts
-from Aathman and makes allow/deny decisions based on a policy file.
+PaCM consumes verified facts from Aathman Core and
+makes deterministic allow/deny decisions based on a policy file.
 """
 
 import sys
@@ -19,13 +19,16 @@ class PaCMDecision:
 
 def load_policy(policy_path: str) -> Dict:
     """
-    Load and validate the policy.yaml file.
+    Load and validate a policy.yaml file.
     """
+
     with open(policy_path, "r", encoding="utf-8") as f:
         policy = yaml.safe_load(f)
 
     if not isinstance(policy, dict):
         raise ValueError("Policy file must be a YAML mapping")
+
+    # ---- schema validation ----
 
     if policy.get("version") != "pacm-v1":
         raise ValueError("Unsupported or missing policy version")
@@ -52,28 +55,33 @@ def load_policy(policy_path: str) -> Dict:
 
 
 def evaluate_policy(policy: Dict, facts: Dict) -> Dict:
-    # 1) Signature requirement
+    """
+    Evaluate verified facts against policy rules.
+    """
+
+    # 1. Signature requirement
     if policy["requirements"].get("signature_required", False):
         if not facts.get("signature_valid", False):
             return {
                 "decision": PaCMDecision.DENY,
-                "reason": "Signature required but invalid or missing"
+                "reason": "Signature required but invalid or missing",
             }
 
-    # 2) Allowed signers
+    # 2. Allowed signers
     allowed_keys = {
-        s.get("public_key")
-        for s in policy.get("allowed_signers", [])
+        signer.get("public_key")
+        for signer in policy.get("allowed_signers", [])
     }
+
     signer_key = facts.get("signer_public_key")
 
     if signer_key not in allowed_keys:
         return {
             "decision": PaCMDecision.DENY,
-            "reason": "Signer is not in allowed_signers"
+            "reason": "Signer is not in allowed_signers",
         }
 
-    # 3) Parameter count constraint
+    # 3. Parameter count constraint
     max_params = policy["constraints"].get("max_parameter_count")
     param_count = facts.get("parameter_count")
 
@@ -81,24 +89,27 @@ def evaluate_policy(policy: Dict, facts: Dict) -> Dict:
         if param_count > max_params:
             return {
                 "decision": PaCMDecision.DENY,
-                "reason": "Model exceeds max_parameter_count"
+                "reason": "Model exceeds max_parameter_count",
             }
 
-    # 4) Fingerprint mismatch (defensive)
+    # 4. Defensive fingerprint check
     if not facts.get("fingerprint_match", False):
         return {
             "decision": PaCMDecision.DENY,
-            "reason": "Fingerprint mismatch"
+            "reason": "Fingerprint mismatch",
         }
 
     return {
         "decision": PaCMDecision.ALLOW,
-        "reason": "Policy satisfied"
+        "reason": "Policy satisfied",
     }
 
 
-
 def main():
+    """
+    Standalone CLI entrypoint.
+    """
+
     if len(sys.argv) != 4:
         print("Usage: pacm.py <model.pth> <cert.json> <policy.yaml>")
         sys.exit(2)
@@ -114,11 +125,11 @@ def main():
         print("Policy error:", str(e))
         sys.exit(1)
 
-    # Import Aathman verifier (local dependency)
+    # Import Aathman Core verifier
     AATHMAN_PATH = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../aathman-core")
     )
-    sys.path.append(AATHMAN_PATH)
+    sys.path.insert(0, AATHMAN_PATH)
 
     try:
         from verify import verify_model
@@ -126,7 +137,7 @@ def main():
         print("Failed to import Aathman verifier:", str(e))
         sys.exit(1)
 
-    # Run Aathman verification
+    # Run verification
     try:
         facts = verify_model(model_path, cert_path)
     except Exception as e:
@@ -139,7 +150,7 @@ def main():
     print(f"Decision: {result['decision']}")
     print(f"Reason: {result['reason']}")
 
-    if result["decision"] == PaCMDecision.DENY:
+    if result["decision"] != PaCMDecision.ALLOW:
         sys.exit(1)
 
     sys.exit(0)
