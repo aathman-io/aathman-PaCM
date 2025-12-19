@@ -5,9 +5,7 @@ requirements:
 
 allowed_signers:
   - name: "aathman-root"
-    public_key: "<HEX_ED25519_PUBLIC_KEY>"
-"
+    public_key: "<HEX_PUBLIC_KEY>"
 
 constraints:
   max_parameter_count: 5000000
-
