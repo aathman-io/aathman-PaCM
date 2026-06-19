@@ -121,10 +121,3 @@ PaCM v0.1 is intentionally minimal and complete. It is designed to demonstrate c
 License
 
 This project is licensed under the Apache License 2.0. See LICENSE for details.
-
----
-
-Contributing
-
-All contributions require signing the Contributor License Agreement (CLA). Please review CLA.md before submitting changes.
-
